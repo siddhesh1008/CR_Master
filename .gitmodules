@@ -1,0 +1,6 @@
+[submodule "CRCS"]
+	path = CRCS
+	url = git@github.com:siddhesh1008/CRCS.git
+[submodule "CRML"]
+	path = CRML
+	url = git@github.com:siddhesh1008/CRML.git
