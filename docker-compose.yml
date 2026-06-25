@@ -80,6 +80,11 @@ services:
       - "7745:7745"
     volumes:
       - /home/sid/homebox/data:/data
+    environment:
+      - HBOX_LOG_LEVEL=info
+      - HBOX_LOG_FORMAT=text
+      - HBOX_WEB_MAX_UPLOAD_SIZE=50
+      - HBOX_OPTIONS_ALLOW_REGISTRATION=false
     networks:
       - cr_network
     restart: unless-stopped
@@ -108,3 +113,4 @@ networks:
 
 volumes:
   ollama_data:
+    external: true
