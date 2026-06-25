@@ -1,0 +1,110 @@
+services:
+
+  # ── MQTT Broker ──────────────────────────────────────────
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./CRCS/mosquitto/config:/mosquitto/config
+      - ./CRCS/mosquitto/data:/mosquitto/data
+      - ./CRCS/mosquitto/log:/mosquitto/log
+    networks:
+      - cr_network
+    restart: unless-stopped
+
+  # ── CRCS Orchestrator ────────────────────────────────────
+  orchestrator:
+    build: ./CRCS/orchestrator
+    container_name: orchestrator
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./CRCS/orchestrator:/app
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.1:8b
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+    networks:
+      - cr_network
+    depends_on:
+      - mosquitto
+      - ollama
+    restart: unless-stopped
+
+  # ── CRML ─────────────────────────────────────────────────
+  crml:
+    build: ./CRML
+    container_name: crml
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./CRML:/app
+    environment:
+      - MQTT__HOST=mosquitto
+      - MQTT__PORT=1883
+    networks:
+      - cr_network
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+  # ── Local AI ─────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - cr_network
+    restart: unless-stopped
+
+  # ── Home Assistant ───────────────────────────────────────
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    network_mode: host
+    volumes:
+      - /home/sid/homeassistant:/config
+    restart: unless-stopped
+
+  # ── Homebox ──────────────────────────────────────────────
+  homebox:
+    image: ghcr.io/sysadminsmedia/homebox:latest
+    container_name: homebox
+    ports:
+      - "7745:7745"
+    volumes:
+      - /home/sid/homebox/data:/data
+    networks:
+      - cr_network
+    restart: unless-stopped
+
+  # ── ROS2 ─────────────────────────────────────────────────
+  ros2:
+    image: osrf/ros:humble-desktop
+    container_name: ros2-master
+    network_mode: host
+    ipc: host
+    pid: host
+    privileged: true
+    environment:
+      - ROS_DOMAIN_ID=42
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+    volumes:
+      - ./CRCS/ros2/workspace:/root/ros2_ws
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+networks:
+  cr_network:
+    driver: bridge
+
+volumes:
+  ollama_data:
